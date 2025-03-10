@@ -1,4 +1,4 @@
-name: FiveM Auto Version & Release
+name: FiveM Release
 
 on:
   workflow_call:
@@ -8,95 +8,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Bump version
-        id: bump_version
-        run: |
-          # Check if fxmanifest.lua exists
-          if [ ! -f "fxmanifest.lua" ]; then
-            echo "❌ fxmanifest.lua not found!"
-            exit 1
-          fi
-          echo "✅ fxmanifest.lua exists"
-
-          # Check if the file is writable
-          if [ ! -w "fxmanifest.lua" ]; then
-            echo "❌ fxmanifest.lua is not writable!"
-            exit 1
-          fi
-          echo "✅ fxmanifest.lua is writable"
-
-          # Display current contents for debugging
-          echo "Debug: Current contents of fxmanifest.lua:"
-          cat fxmanifest.lua
-          echo "------------------------------------------"
-
-          # Extract the old version
-          OLD_VERSION=$(grep -E "^\s*version\s+['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | head -n 1 | sed -E "s/.*version\s+['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
-          if [ -z "$OLD_VERSION" ]; then
-            echo "❌ Version not found in fxmanifest.lua!"
-            exit 1
-          fi
-          echo "✅ Old version: $OLD_VERSION"
-
-          # Calculate the new version (increment patch)
-          IFS='.' read -r major minor patch <<< "$OLD_VERSION"
-          patch=$((patch + 1))
-          NEW_VERSION="${major}.${minor}.${patch}"
-          echo "✅ New version will be: $NEW_VERSION"
-
-          # Update the version in the file
-          echo "Debug: Attempting to update version..."
-          if ! sed -i -E "s/^\s*version\s+['\"][0-9]+\.[0-9]+\.[0-9]+['\"]/version '$NEW_VERSION'/" fxmanifest.lua; then
-            echo "❌ Failed to update version with sed"
-            exit 1
-          fi
-
-          # Display updated contents for debugging
-          echo "Debug: Updated contents of fxmanifest.lua:"
-          cat fxmanifest.lua
-          echo "------------------------------------------"
-
-          # Verify the update
-          if ! grep -q "version '$NEW_VERSION'" fxmanifest.lua; then
-            echo "❌ Verification failed - new version not found in fxmanifest.lua"
-            exit 1
-          fi
-
-          # Set output for subsequent steps
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Successfully updated to new version: $NEW_VERSION"
-
-      - name: Commit updated manifest
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: Bump version to ${{ steps.bump_version.outputs.new_version }}"
-
       - name: Prepare Escrow Version
         run: |
-          mkdir -p escrow_version
-          rsync -av --exclude='.git' --exclude='escrow_version' --exclude='open_source_version' ./ escrow_version/
+          mkdir ata_shop_escrow
+          rsync -av --exclude='.git/' ./ ata_shop_escrow/
+          zip -r ata_shop_escrow.zip ata_shop_escrow
 
       - name: Prepare Open Source Version
         run: |
-          mkdir -p open_source_version
-          rsync -av --exclude='.git' --exclude='escrow_version' --exclude='open_source_version' ./ open_source_version/
-          sed -i '/escrow_ignore {/,/}/ s/^/--/' open_source_version/fxmanifest.lua
-          echo -e "escrow_ignore {\n    '**.**',\n    '**/**',\n    '**/**/**'\n}" >> open_source_version/fxmanifest.lua
-
-      - name: Create ZIP archives
-        run: |
-          zip -r escrow_version.zip escrow_version
-          zip -r open_source_version.zip open_source_version
+          mkdir ata_shop_opensource
+          rsync -av --exclude='.git/' ./ ata_shop_opensource/
+          zip -r ata_shop_opensource.zip ata_shop_opensource
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: "v${{ steps.bump_version.outputs.new_version }}"
+          tag_name: "release-$(date +'%Y-%m-%d-%H%M%S')"
           files: |
-            escrow_version.zip
-            open_source_version.zip
+            ata_shop_escrow.zip
+            ata_shop_opensource.zip
