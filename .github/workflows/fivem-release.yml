@@ -10,6 +10,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Get Repository Name
+        id: repo_name
+        run: echo "repo_name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
       - name: Get Version from fxmanifest
         id: get_version
         run: |
@@ -17,12 +20,24 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       - name: Prepare Escrow Version
         run: |
-          # Create zip directly from current directory without creating nested folder
-          zip -r ata_shop_${{ steps.get_version.outputs.version }}_escrow.zip . -x ".git/*" ".github/*" "*.zip"
+          # Create a folder with repository name
+          mkdir -p ${{ steps.repo_name.outputs.repo_name }}
+          # Copy files to that folder
+          rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' ./ ${{ steps.repo_name.outputs.repo_name }}/
+          # Create zip with the folder
+          zip -r ${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_escrow.zip ${{ steps.repo_name.outputs.repo_name }}
+          # Clean up
+          rm -rf ${{ steps.repo_name.outputs.repo_name }}
       - name: Prepare Open Source Version
         run: |
-          # Create zip directly from current directory without creating nested folder
-          zip -r ata_shop_${{ steps.get_version.outputs.version }}_opensource.zip . -x ".git/*" ".github/*" "*.zip"
+          # Create a folder with repository name
+          mkdir -p ${{ steps.repo_name.outputs.repo_name }}
+          # Copy files to that folder
+          rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' ./ ${{ steps.repo_name.outputs.repo_name }}/
+          # Create zip with the folder
+          zip -r ${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_opensource.zip ${{ steps.repo_name.outputs.repo_name }}
+          # Clean up
+          rm -rf ${{ steps.repo_name.outputs.repo_name }}
       - name: Generate Release Tag
         id: tag
         run: echo "release_tag=v${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
@@ -31,5 +46,5 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.release_tag }}
           files: |
-            ata_shop_${{ steps.get_version.outputs.version }}_escrow.zip
-            ata_shop_${{ steps.get_version.outputs.version }}_opensource.zip
+            ${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_escrow.zip
+            ${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_opensource.zip
