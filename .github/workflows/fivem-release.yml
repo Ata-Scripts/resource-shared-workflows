@@ -12,6 +12,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 👇 این مرحله جدید را اضافه کن تا فایل را چک کنی
+      - name: Debug fxmanifest.lua
+        run: |
+          ls -al
+          cat fxmanifest.lua
+
       - name: Bump version
         id: bump_version
         run: |
