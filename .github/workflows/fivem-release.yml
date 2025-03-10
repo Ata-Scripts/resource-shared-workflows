@@ -23,15 +23,17 @@ jobs:
 
       - name: Prepare Escrow Version
         run: |
-          mkdir -p ata_shop
-          rsync -av --exclude='.git/' --exclude='.github/' ./ ata_shop/
-          zip -r ata_shop_${{ steps.get_version.outputs.version }}_escrow.zip ata_shop
+          mkdir -p ata_shop_escrow/ata_shop
+          rsync -av --exclude='.git/' --exclude='.github/' ./ ata_shop_escrow/ata_shop/
+          cd ata_shop_escrow
+          zip -r ../ata_shop_${{ steps.get_version.outputs.version }}_escrow.zip ata_shop
 
       - name: Prepare Open Source Version
         run: |
-          mkdir -p ata_shop
-          rsync -av --exclude='.git/' --exclude='.github/' ./ ata_shop/
-          zip -r ata_shop_${{ steps.get_version.outputs.version }}_opensource.zip ata_shop
+          mkdir -p ata_shop_opensource/ata_shop
+          rsync -av --exclude='.git/' --exclude='.github/' ./ ata_shop_opensource/ata_shop/
+          cd ata_shop_opensource
+          zip -r ../ata_shop_${{ steps.get_version.outputs.version }}_opensource.zip ata_shop
 
       - name: Generate Release Tag
         id: tag
