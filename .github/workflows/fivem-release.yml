@@ -1,0 +1,63 @@
+name: FiveM Auto Version & Release
+
+on:
+  workflow_call:
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          OLD_VERSION=$(grep 'version' fxmanifest.lua | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          CUSTOM_VERSION="$(git log -1 --pretty=%B | grep -oP '\\d+\\.\\d+\\.\\d+')"
+          
+          if [ -n "$CUSTOM_VERSION" ]; then
+            NEW_VERSION=$CUSTOM_VERSION
+          else
+            IFS='.' read -r -a PARTS <<< "$OLD_VERSION"
+            ((PARTS[2]++))
+            if [ "${PARTS[2]}" -gt 9 ]; then
+              PARTS[2]=0
+              ((PARTS[1]++))
+            fi
+            if [ "${PARTS[1]}" -gt 9 ]; then
+              PARTS[1]=0
+              ((PARTS[0]++))
+            fi
+            NEW_VERSION="${PARTS[0]}.${PARTS[1]}.${PARTS[2]}"
+          fi
+          
+          sed -i "s/version '[0-9]\+\.[0-9]\+\.[0-9]\+'/version '$NEW_VERSION'/" fxmanifest.lua
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Commit updated manifest
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: Bump version to ${{ steps.bump_version.outputs.new_version }}"
+
+      - name: Prepare Escrow Version
+        run: |
+          mkdir escrow_version
+          rsync -av --exclude='.git/' --exclude='escrow_version/' --exclude='open_source_version/' ./ escrow_version/
+
+      - name: Prepare Open Source Version
+        run: |
+          mkdir open_source_version
+          rsync -av --exclude='.git/' --exclude='escrow_version/' --exclude='open_source_version/' ./ open_source_version/
+          sed -i '/escrow_ignore {/,/}/ s/^/--/' open_source_version/fxmanifest.lua
+          echo -e "escrow_ignore {\n    '**.**',\n    '**/**',\n    '**/**/**'\n}" >> open_source_version/fxmanifest.lua
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "v${{ steps.bump_version.outputs.new_version }}"
+          files: |
+            escrow_version/**
+            open_source_version/**
