@@ -15,26 +15,34 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Get Version from fxmanifest
+        id: get_version
+        run: |
+          VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Prepare Escrow Version
         run: |
-          mkdir ata_shop_escrow
-          rsync -av --exclude='.git/' ./ ata_shop_escrow/
-          zip -r ata_shop_escrow.zip ata_shop_escrow
+          mkdir -p ata_shop_escrow/ata_shop
+          rsync -av --exclude='.git/' ./ ata_shop_escrow/ata_shop/
+          cd ata_shop_escrow
+          zip -r ../ata_shop_${{ steps.get_version.outputs.version }}_escrow.zip .
 
       - name: Prepare Open Source Version
         run: |
-          mkdir ata_shop_opensource
-          rsync -av --exclude='.git/' ./ ata_shop_opensource/
-          zip -r ata_shop_opensource.zip ata_shop_opensource
+          mkdir -p ata_shop_opensource/ata_shop
+          rsync -av --exclude='.git/' ./ ata_shop_opensource/ata_shop/
+          cd ata_shop_opensource
+          zip -r ../ata_shop_${{ steps.get_version.outputs.version }}_opensource.zip .
 
       - name: Generate Release Tag
         id: tag
-        run: echo "release_tag=release-$(date +'%Y-%m-%d-%H%M%S')" >> $GITHUB_OUTPUT
+        run: echo "release_tag=v${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.tag.outputs.release_tag }}
           files: |
-            ata_shop_escrow.zip
-            ata_shop_opensource.zip
+            ata_shop_${{ steps.get_version.outputs.version }}_escrow.zip
+            ata_shop_${{ steps.get_version.outputs.version }}_opensource.zip
