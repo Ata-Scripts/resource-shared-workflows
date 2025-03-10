@@ -15,7 +15,7 @@ jobs:
       - name: Bump version
         id: bump_version
         run: |
-          OLD_VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
+          OLD_VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | head -n 1 | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
           if [ -z "$OLD_VERSION" ]; then
             echo "❌ Version not found in fxmanifest.lua!"
             exit 1
