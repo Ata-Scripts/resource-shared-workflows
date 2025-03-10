@@ -9,52 +9,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full commit history for changelog
-
+          fetch-depth: 0
       - name: Get Repository Name
         id: repo_name
         run: echo "repo_name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
-
       - name: Get Version from fxmanifest
         id: get_version
         run: |
           VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Install Dependencies
-        run: pip install requests datasets
-
-      - name: Generate Changelog with Hugging Face API
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          HF_API_KEY: ${{ secrets.HF_API_KEY }}
-        run: python scripts/generate_changelog.py
-
       - name: Create Escrow Version
         run: |
+          # Create a temp directory for building the zip
           TEMP_DIR="$(pwd)/temp_build_dir"
           mkdir -p "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}"
+          
+          # Copy files to the folder structure
           rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' --exclude='temp_build_dir/' ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
+          
+          # Create zip
           cd "$TEMP_DIR"
           zip -r "${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_escrow.zip" "${{ steps.repo_name.outputs.repo_name }}"
+          
+          # Move the zip back to workspace
           mv "${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_escrow.zip" "$GITHUB_WORKSPACE/"
+          
+          # Clean up
+          cd "$GITHUB_WORKSPACE"
           rm -rf "$TEMP_DIR"
-
       - name: Create Open Source Version
         run: |
+          # Create a temp directory for building the zip
           TEMP_DIR="$(pwd)/temp_build_dir"
           mkdir -p "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}"
+          
+          # Copy files to the folder structure
           rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' --exclude='temp_build_dir/' ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
+          
+          # Create zip
           cd "$TEMP_DIR"
           zip -r "${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_opensource.zip" "${{ steps.repo_name.outputs.repo_name }}"
+          
+          # Move the zip back to workspace
           mv "${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_opensource.zip" "$GITHUB_WORKSPACE/"
+          
+          # Clean up
+          cd "$GITHUB_WORKSPACE"
           rm -rf "$TEMP_DIR"
-
       - name: Generate Release Tag
         id: tag
         run: echo "release_tag=v${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
-
-      - name: Create GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.tag.outputs.release_tag }}
