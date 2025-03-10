@@ -51,20 +51,25 @@ jobs:
 
       - name: Prepare Escrow Version
         run: |
-          mkdir escrow_version
-          rsync -av --exclude='.git/' --exclude='escrow_version/' --exclude='open_source_version/' ./ escrow_version/
+          mkdir -p escrow_version
+          rsync -av --exclude='.git' --exclude='escrow_version' --exclude='open_source_version' ./ escrow_version/
 
       - name: Prepare Open Source Version
         run: |
-          mkdir open_source_version
-          rsync -av --exclude='.git/' --exclude='escrow_version/' --exclude='open_source_version/' ./ open_source_version/
+          mkdir -p open_source_version
+          rsync -av --exclude='.git' --exclude='escrow_version' --exclude='open_source_version' ./ open_source_version/
           sed -i '/escrow_ignore {/,/}/ s/^/--/' open_source_version/fxmanifest.lua
           echo -e "escrow_ignore {\n    '**.**',\n    '**/**',\n    '**/**/**'\n}" >> open_source_version/fxmanifest.lua
+
+      - name: Create ZIP archives
+        run: |
+          zip -r escrow_version.zip escrow_version
+          zip -r open_source_version.zip open_source_version
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: "v${{ steps.bump_version.outputs.new_version }}"
           files: |
-            escrow_version/**
-            open_source_version/**
+            escrow_version.zip
+            open_source_version.zip
