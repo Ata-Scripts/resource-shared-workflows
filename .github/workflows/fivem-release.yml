@@ -13,6 +13,7 @@ jobs:
           fetch-depth: 0
 
       - name: Bump version
+              - name: Bump version
         id: bump_version
         run: |
           # Check if fxmanifest.lua exists
@@ -21,6 +22,7 @@ jobs:
             exit 1
           fi
 
+          # Get the old version
           OLD_VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | head -n 1 | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
           if [ -z "$OLD_VERSION" ]; then
             echo "❌ Version not found in fxmanifest.lua!"
@@ -28,12 +30,18 @@ jobs:
           fi
           echo "✅ Old version: $OLD_VERSION"
 
+          # Get custom version from commit message if it exists
           CUSTOM_VERSION="$(git log -1 --pretty=%B | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+')"
+          echo "Debug: Custom version from commit = '$CUSTOM_VERSION'"
 
           if [ -n "$CUSTOM_VERSION" ]; then
             NEW_VERSION=$CUSTOM_VERSION
+            echo "Debug: Using custom version from commit message"
           else
+            # Parse and increment version
             IFS='.' read -r major minor patch <<< "$OLD_VERSION"
+            echo "Debug: Parsed version - major=$major, minor=$minor, patch=$patch"
+            
             patch=$((patch + 1))
             if [ "$patch" -gt 9 ]; then
               patch=0
@@ -44,16 +52,26 @@ jobs:
               major=$((major + 1))
             fi
             NEW_VERSION="${major}.${minor}.${patch}"
+            echo "Debug: Calculated new version = $NEW_VERSION"
           fi
 
-          # Verify the substitution worked
-          if sed -i -E "s/version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]/version '$NEW_VERSION'/" fxmanifest.lua; then
-            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-            echo "✅ New version: $NEW_VERSION"
-          else
+          # Update the version in the file
+          echo "Debug: Attempting to update version in fxmanifest.lua"
+          if ! sed -i -E "s/version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]/version '$NEW_VERSION'/" fxmanifest.lua; then
             echo "❌ Failed to update version in fxmanifest.lua"
             exit 1
           fi
+
+          # Verify the update worked
+          if ! grep -q "version '$NEW_VERSION'" fxmanifest.lua; then
+            echo "❌ Version update verification failed"
+            exit 1
+          fi
+
+          # Set output
+          echo "Debug: Setting GitHub output"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "✅ New version: $NEW_VERSION"
 
       - name: Commit updated manifest
         uses: stefanzweifel/git-auto-commit-action@v5
