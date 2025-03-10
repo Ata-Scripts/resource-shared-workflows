@@ -3,6 +3,9 @@ name: FiveM Release
 on:
   workflow_call:
 
+permissions:
+  contents: write
+
 jobs:
   build-release:
     runs-on: ubuntu-latest
