@@ -24,10 +24,14 @@ jobs:
           rsync -av --exclude='.git/' ./ ata_shop_opensource/
           zip -r ata_shop_opensource.zip ata_shop_opensource
 
+      - name: Generate Release Tag
+        id: tag
+        run: echo "release_tag=release-$(date +'%Y-%m-%d-%H%M%S')" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: "release-$(date +'%Y-%m-%d-%H%M%S')"
+          tag_name: ${{ steps.tag.outputs.release_tag }}
           files: |
             ata_shop_escrow.zip
             ata_shop_opensource.zip
