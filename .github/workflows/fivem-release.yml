@@ -18,26 +18,27 @@ jobs:
         run: |
           VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Prepare Escrow Version
+      - name: Setup Release Structure
         run: |
-          # Create a folder with repository name
-          mkdir -p ${{ steps.repo_name.outputs.repo_name }}
+          # Create a folder with repository name once
+          mkdir -p ../${{ steps.repo_name.outputs.repo_name }}
           # Copy files to that folder
-          rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' ./ ${{ steps.repo_name.outputs.repo_name }}/
-          # Create zip with the folder
+          rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' ./ ../${{ steps.repo_name.outputs.repo_name }}/
+      - name: Create Escrow Version
+        run: |
+          # Create zip from parent directory to include repo folder but not create double nesting
+          cd ..
           zip -r ${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_escrow.zip ${{ steps.repo_name.outputs.repo_name }}
-          # Clean up
-          rm -rf ${{ steps.repo_name.outputs.repo_name }}
-      - name: Prepare Open Source Version
+          mv ${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_escrow.zip $GITHUB_WORKSPACE/
+      - name: Create Open Source Version
         run: |
-          # Create a folder with repository name
-          mkdir -p ${{ steps.repo_name.outputs.repo_name }}
-          # Copy files to that folder
-          rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' ./ ${{ steps.repo_name.outputs.repo_name }}/
-          # Create zip with the folder
+          # Create zip from parent directory to include repo folder but not create double nesting
+          cd ..
           zip -r ${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_opensource.zip ${{ steps.repo_name.outputs.repo_name }}
-          # Clean up
-          rm -rf ${{ steps.repo_name.outputs.repo_name }}
+          mv ${{ steps.repo_name.outputs.repo_name }}_${{ steps.get_version.outputs.version }}_opensource.zip $GITHUB_WORKSPACE/
+      - name: Cleanup
+        run: |
+          rm -rf ../${{ steps.repo_name.outputs.repo_name }}
       - name: Generate Release Tag
         id: tag
         run: echo "release_tag=v${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
