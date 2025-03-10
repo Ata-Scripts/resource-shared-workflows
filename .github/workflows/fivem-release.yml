@@ -1,44 +1,31 @@
 name: FiveM Release
-
 on:
   workflow_call:
-
 permissions:
   contents: write
-
 jobs:
   build-release:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Get Version from fxmanifest
         id: get_version
         run: |
           VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
       - name: Prepare Escrow Version
         run: |
-          mkdir ata_shop
-          rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' ./ ata_shop/
-          zip -r ata_shop_${{ steps.get_version.outputs.version }}_escrow.zip ata_shop
-          rm -rf ata_shop
-
+          # Create zip directly from current directory without creating nested folder
+          zip -r ata_shop_${{ steps.get_version.outputs.version }}_escrow.zip . -x ".git/*" ".github/*" "*.zip"
       - name: Prepare Open Source Version
         run: |
-          mkdir ata_shop
-          rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' ./ ata_shop/
-          zip -r ata_shop_${{ steps.get_version.outputs.version }}_opensource.zip ata_shop
-          rm -rf ata_shop
-
+          # Create zip directly from current directory without creating nested folder
+          zip -r ata_shop_${{ steps.get_version.outputs.version }}_opensource.zip . -x ".git/*" ".github/*" "*.zip"
       - name: Generate Release Tag
         id: tag
         run: echo "release_tag=v${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
