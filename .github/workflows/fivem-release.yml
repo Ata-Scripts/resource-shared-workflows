@@ -58,7 +58,7 @@ jobs:
           mkdir -p "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}"
           
           # Copy files to the folder structure
-          rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' --exclude='temp_build_dir/' ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
+          rsync -av --exclude='.git/' --exclude='.vscode/' --exclude='.github/' --exclude='*.zip' --exclude='temp_build_dir/' ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
           
           # Create zip
           cd "$TEMP_DIR"
