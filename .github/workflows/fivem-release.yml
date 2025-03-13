@@ -18,6 +18,39 @@ jobs:
         run: |
           VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Update scripts.json
+        run: |
+          # Install jq for JSON manipulation
+          sudo apt-get install -y jq
+          
+          # Path to scripts.json
+          JSON_FILE="ata_version/scripts.json"
+          
+          # Ensure the file exists
+          if [ ! -f "$JSON_FILE" ]; then
+            echo '{"discord":"https://discord.gg/5tVUgq8","store_name":"Ata Scripts","store_link":"https://ata.tebex.io/"}' > "$JSON_FILE"
+          fi
+          
+          # Repository name and new version
+          REPO_KEY="${{ steps.repo_name.outputs.repo_name }}"
+          NEW_VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Create temp file for JSON update
+          TEMP_FILE=$(mktemp)
+          
+          # Update existing key or add new one
+          jq --arg key "$REPO_KEY" --arg ver "$NEW_VERSION" \
+            '.[$key] = $ver' "$JSON_FILE" > "$TEMP_FILE"
+          
+          # Replace original file with updated content
+          mv "$TEMP_FILE" "$JSON_FILE"
+          
+          # Stage and commit changes
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add "$JSON_FILE"
+          git commit -m "Update scripts.json: Set $REPO_KEY to version $NEW_VERSION"
+          git push
       - name: Create Escrow Version
         run: |
           # Create a temp directory for building the zip
