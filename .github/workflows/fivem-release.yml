@@ -16,7 +16,7 @@ jobs:
       - name: Get Version from fxmanifest
         id: get_version
         run: |
-          VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
+          VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/" || echo "0.0.0")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       - name: Update scripts.json
         run: |
@@ -25,6 +25,9 @@ jobs:
           
           # Path to scripts.json
           JSON_FILE="ata_version/scripts.json"
+          
+          # Ensure the directory exists
+          mkdir -p "$(dirname "$JSON_FILE")"
           
           # Ensure the file exists
           if [ ! -f "$JSON_FILE" ]; then
@@ -49,8 +52,8 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add "$JSON_FILE"
-          git commit -m "Update scripts.json: Set $REPO_KEY to version $NEW_VERSION"
-          git push
+          git commit -m "Update scripts.json: Set $REPO_KEY to version $NEW_VERSION" || echo "No changes to commit"
+          git push || echo "No changes to push"
       - name: Create Escrow Version
         run: |
           # Create a temp directory for building the zip
@@ -58,7 +61,7 @@ jobs:
           mkdir -p "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}"
           
           # Copy files to the folder structure
-          rsync -av --exclude='.git/' --exclude='.vscode/' --exclude='.github/' --exclude='*.zip' --exclude='temp_build_dir/' ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
+          rsync -av --exclude='.git/' --exclude='.github/' --exclude='*.zip' --exclude='temp_build_dir/' ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
           
           # Create zip
           cd "$TEMP_DIR"
