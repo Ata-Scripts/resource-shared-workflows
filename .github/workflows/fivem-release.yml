@@ -23,7 +23,7 @@ jobs:
 
       - name: Bump manifest version
         shell: bash
-        run: node ./../actions/bump-manifest-version.js
+        run: node .github/actions/bump-manifest-version.js
 
       - name: Get Repository Name
         id: repo_name
