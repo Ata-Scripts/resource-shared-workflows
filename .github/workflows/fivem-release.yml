@@ -84,6 +84,31 @@ jobs:
             --exclude='*.zip' \
             --exclude='temp_build_dir/' \
             ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
+          
+          # Modify fxmanifest.lua to replace escrow_ignore for opensource version
+          MANIFEST_PATH="$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/fxmanifest.lua"
+          if [ -f "$MANIFEST_PATH" ]; then
+            # Use awk to replace the entire escrow_ignore block
+            awk '
+              /^escrow_ignore\s*\{/ {
+                print "escrow_ignore {"
+                print "    '\''**'\'',"
+                print "    '\''**/**'\'',"
+                print "    '\''**/**/**'\'',"
+                print "    '\''**/**/**/**'\'',"
+                print "    '\''**/**/**/**/**'\''"
+                print "}"
+                # Skip lines until we find the closing brace
+                while (getline > 0) {
+                  if (/^\}/) break
+                }
+                next
+              }
+              { print }
+            ' "$MANIFEST_PATH" > "$MANIFEST_PATH.tmp"
+            mv "$MANIFEST_PATH.tmp" "$MANIFEST_PATH"
+          fi
+          
           (cd "$TEMP_DIR" && zip -r "${{ steps.repo_name.outputs.repo_name }}_opensource.zip" "${{ steps.repo_name.outputs.repo_name }}")
           mv "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}_opensource.zip" "$GITHUB_WORKSPACE/"
           rm -rf "$TEMP_DIR"
