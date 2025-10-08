@@ -1,66 +1,66 @@
-name: FiveM Release
-on:
-  workflow_call:
+workflow_call:
 permissions:
-  contents: write
-
+contents: write
 jobs:
-  build-release:
-    runs-on: ubuntu-latest
-    env:
-      EXCLUDES: "--exclude='.git/' --exclude='.github/' --exclude='.vscode/' --exclude='*.zip' --exclude='temp_build_dir/'"
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Get Repository Name
-        id: repo_name
-        run: echo "repo_name=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
-
-      - name: Get Version from fxmanifest
-        id: get_version
-        shell: bash
+build-release:
+runs-on: ubuntu-latest
+steps:
+- uses: actions/checkout@v4
+with:
+fetch-depth: 0
+- name: Get Repository Name
+id: repo_name
+        run: echo "repo_name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
+- name: Get Version from fxmanifest
+id: get_version
+run: |
+          VERSION=$(grep -E "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | sed -E "s/.*version ['\"]([0-9]+\.[0-9]+\.[0-9]+)['\"].*/\1/")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Create Escrow Version
+run: |
+          # Create a temp directory for building the zip
+          TEMP_DIR="$(pwd)/temp_build_dir"
+          mkdir -p "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}"
+          
+          # Copy files to the folder structure
+          rsync -av --exclude='.git/' --exclude='.github/' --exclude='.vscode/' --exclude='*.zip' --exclude='temp_build_dir/' ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
+          
+          # Create zip
+          cd "$TEMP_DIR"
+          zip -r "${{ steps.repo_name.outputs.repo_name }}_escrow.zip" "${{ steps.repo_name.outputs.repo_name }}"
+          
+          # Move the zip back to workspace
+          mv "${{ steps.repo_name.outputs.repo_name }}_escrow.zip" "$GITHUB_WORKSPACE/"
+          
+          # Clean up
+          cd "$GITHUB_WORKSPACE"
+          rm -rf "$TEMP_DIR"
+      - name: Create Open Source Version
         run: |
-          set -euo pipefail
-          test -f fxmanifest.lua || { echo "fxmanifest.lua missing"; exit 1; }
-          VERSION=$(grep -Eo "version ['\"][0-9]+\.[0-9]+\.[0-9]+['\"]" fxmanifest.lua | grep -Eo "[0-9]+\.[0-9]+\.[0-9]+")
-          [ -n "${VERSION:-}" ] || { echo "version not found in fxmanifest.lua"; exit 1; }
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Package variant
-        id: package
-        shell: bash
-        run: |
-          set -euo pipefail
-          build_one () {
-            local variant="$1"   # escrow | opensource
-            local tmp="$PWD/temp_build_dir_$variant"
-            mkdir -p "$tmp/${{ steps.repo_name.outputs.repo_name }}"
-            rsync -a --delete $EXCLUDES ./ "$tmp/${{ steps.repo_name.outputs.repo_name }}/"
-            (cd "$tmp" && zip -rq -X "${{ steps.repo_name.outputs.repo_name }}_${variant}.zip" "${{ steps.repo_name.outputs.repo_name }}")
-            mv "$tmp/${{ steps.repo_name.outputs.repo_name }}_${variant}.zip" "$GITHUB_WORKSPACE/"
-            rm -rf "$tmp"
-          }
-          build_one escrow
-          build_one opensource
-          echo "escrow_asset=${{ steps.repo_name.outputs.repo_name }}_escrow.zip" >> "$GITHUB_OUTPUT"
-          echo "oss_asset=${{ steps.repo_name.outputs.repo_name }}_opensource.zip" >> "$GITHUB_OUTPUT"
-
-      - name: Generate Release Tag
-        id: tag
-        run: echo "release_tag=v${{ steps.get_version.outputs.version }}" >> "$GITHUB_OUTPUT"
-
-      - name: Create Release (single tag, two assets, stamped)
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.release_tag }}
-          name: "${{ steps.repo_name.outputs.repo_name }} v${{ steps.get_version.outputs.version }} [escrow] [opensource]"
-          body: |
-            **Release variants**
-            - `escrow`: ${{ steps.package.outputs.escrow_asset }}
-            - `opensource`: ${{ steps.package.outputs.oss_asset }}
-          files: |
-            ${{ steps.package.outputs.escrow_asset }}
-            ${{ steps.package.outputs.oss_asset }}
-          make_latest: true
+          # Create a temp directory for building the zip
+          TEMP_DIR="$(pwd)/temp_build_dir"
+          mkdir -p "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}"
+          
+          # Copy files to the folder structure
+          rsync -av --exclude='.git/' --exclude='.github/' --exclude='.vscode/' --exclude='*.zip' --exclude='temp_build_dir/' ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
+          
+          # Create zip
+          cd "$TEMP_DIR"
+          zip -r "${{ steps.repo_name.outputs.repo_name }}_opensource.zip" "${{ steps.repo_name.outputs.repo_name }}"
+          
+          # Move the zip back to workspace
+          mv "${{ steps.repo_name.outputs.repo_name }}_opensource.zip" "$GITHUB_WORKSPACE/"
+          
+          # Clean up
+          cd "$GITHUB_WORKSPACE"
+          rm -rf "$TEMP_DIR"
+     - name: Generate Release Tag
+id: tag
+        run: echo "release_tag=v${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+with:
+tag_name: ${{ steps.tag.outputs.release_tag }}
+         files: |
+            ${{ steps.repo_name.outputs.repo_name }}_escrow.zip
+            ${{ steps.repo_name.outputs.repo_name }}_opensource.zip
