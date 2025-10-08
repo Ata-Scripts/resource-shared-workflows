@@ -41,7 +41,9 @@ jobs:
             echo "No semantic version found in fxmanifest.lua" >&2
             exit 1
           fi
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version<<EOF" >> $GITHUB_OUTPUT
+          echo "$VERSION" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create Escrow Version
         shell: bash
