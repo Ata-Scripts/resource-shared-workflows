@@ -3,9 +3,9 @@ const fs = require("fs");
 // Read manifest
 const manifestFile = fs.readFileSync("fxmanifest.lua", "utf8");
 
-// Extract version string like 1.0.0
+// Extract version string like 1.0.0 (match only 'version', not 'fx_version')
 const versionMatch = manifestFile.match(
-  /version\s+['"](\d+)\.(\d+)\.(\d+)['"]/
+  /^version\s+['"](\d+)\.(\d+)\.(\d+)['"]/m
 );
 
 if (!versionMatch) {
@@ -27,12 +27,11 @@ if (patch > 9) {
 
 const newVersion = `${major}.${minor}.${patch}`;
 
-// Replace in file
+// Replace in file (only match 'version', not 'fx_version')
 const newFileContent = manifestFile.replace(
-  /version\s+['"].*['"]/,
+  /^version\s+['"].*['"]/m,
   `version '${newVersion}'`
 );
 
 // Write updated manifest
 fs.writeFileSync("fxmanifest.lua", newFileContent, "utf8");
-
