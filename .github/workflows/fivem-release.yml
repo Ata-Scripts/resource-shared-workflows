@@ -23,7 +23,7 @@ jobs:
 
       - name: Bump manifest version
         shell: bash
-        run: node .github/actions/bump-manifest-version.js
+        run: node https://raw.githubusercontent.com/Ata-Scripts/resource-shared-workflows/refs/heads/main/.github/workflows/fivem-release.yml
 
       - name: Get Repository Name
         id: repo_name
