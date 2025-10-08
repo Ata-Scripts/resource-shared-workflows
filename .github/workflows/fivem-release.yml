@@ -65,7 +65,7 @@ jobs:
             --exclude='.github/' \
             --exclude='.vscode/' \
             --exclude='*.zip' \
-            --exclude='./*.js' \
+            --exclude='bump-manifest-version.js' \
             --exclude='.gitignore' \
             --exclude='temp_build_dir/' \
             ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
@@ -84,7 +84,7 @@ jobs:
             --exclude='.github/' \
             --exclude='.vscode/' \
             --exclude='*.zip' \
-            --exclude='./bump-manifest-version.js' \
+            --exclude='bump-manifest-version.js' \
             --exclude='temp_build_dir/' \
             ./ "$TEMP_DIR/${{ steps.repo_name.outputs.repo_name }}/"
 
