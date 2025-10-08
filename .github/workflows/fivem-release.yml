@@ -30,7 +30,7 @@ jobs:
       - name: Get Repository Name
         id: repo_name
         shell: bash
-        run: echo "repo_name=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+        run: echo "repo_name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
 
       - name: Get Version from fxmanifest.lua
         id: get_version
@@ -41,7 +41,7 @@ jobs:
             echo "No semantic version found in fxmanifest.lua" >&2
             exit 1
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Create Escrow Version
         shell: bash
