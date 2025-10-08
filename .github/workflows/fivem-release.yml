@@ -27,11 +27,6 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/Ata-Scripts/resource-shared-workflows/refs/heads/main/.github/actions/bump-manifest-version.js -o bump-manifest-version.js
           node bump-manifest-version.js
 
-      - name: Get Repository Name
-        id: repo_name
-        shell: bash
-        run: echo "repo_name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
-
       - name: Get Version from fxmanifest.lua
         id: get_version
         shell: bash
@@ -44,6 +39,20 @@ jobs:
           echo "version<<EOF" >> $GITHUB_OUTPUT
           echo "$VERSION" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        shell: bash
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add fxmanifest.lua
+          git commit -m "chore: bump version to ${{ steps.get_version.outputs.version }}"
+          git push
+
+      - name: Get Repository Name
+        id: repo_name
+        shell: bash
+        run: echo "repo_name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
 
       - name: Create Escrow Version
         shell: bash
