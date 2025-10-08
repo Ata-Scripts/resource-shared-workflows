@@ -1,58 +1,37 @@
 const fs = require("fs");
-const path = require('path');
-const replace = require('replace-in-file');
 
-const version = process.env.TGT_RELEASE_VERSION;
-const newVersion = version.replace("v", "");
-const defaultFolderPath = process.env.GITHUB_WORKSPACE;
-const targetFile = 'fxmanifest.lua';
-const allResults = [];
+// Read manifest
+const manifestFile = fs.readFileSync("fxmanifest.lua", "utf8");
 
-const replaceInFiles = (folderPath) => {
-  const entries = fs.readdirSync(folderPath, { withFileTypes: true });
+// Extract version string like 1.0.0
+const versionMatch = manifestFile.match(/version\s+['"](\d+)\.(\d+)\.(\d+)['"]/);
 
-  entries.forEach(entry => {
-    const entryPath = path.join(folderPath, entry.name);
-      console.log(entryPath)
-    if (entry.isDirectory()) {
-      console.log("replace", entryPath)
-      replaceInFiles(entryPath);
-    } else if (entry.isFile() && entry.name === targetFile) {
-      const options = {
-        files: entryPath,
-        from: /\bversion\s+(.*)$/gm,
-        to: `version '${newVersion}'`,
-      };
+if (!versionMatch) {
+  throw new Error("No version found in fxmanifest.lua");
+}
 
-      try {
-        const results = replace.sync(options);
-        results.forEach(result => {
-          if (result.hasChanged) {
-            allResults.push(result);
-          }
-        });
-      } catch (error) {
-        console.error('Error occurred:', error);
-      }
-    }
-  });
-};
+let [_, major, minor, patch] = versionMatch.map(Number);
 
-//replaceInFiles(defaultFolderPath);
+// Increment logic
+patch++;
+if (patch > 9) {
+  patch = 0;
+  minor++;
+  if (minor > 9) {
+    minor = 0;
+    major++;
+  }
+}
 
-const results = replace.sync({
-    files: "./**/fxmanifest.lua",
-    from: /\bversion\s+(.*)$/gm,
-    to: `version '${newVersion}'`,
-});
+const newVersion = `${major}.${minor}.${patch}`;
 
-process.on('exit', () => {
-  const changedFiles = results.map(result => result.file);
-  console.log(changedFiles);
-  //console.log(defaultFolderPath);
-  //if (changedFiles.length > 0) {
-    //console.log(`echo "FXMANIFEST_FILE_CHANGES=${JSON.stringify(changedFiles)}" >> $GITHUB_ENV`);
-  //} else {
-    //console.log('No changes!');
-  //}
-});
+// Replace in file
+const newFileContent = manifestFile.replace(
+  /version\s+['"].*['"]/,
+  `version '${newVersion}'`
+);
+
+// Write updated manifest
+fs.writeFileSync("fxmanifest.lua", newFileContent, "utf8");
+
+console.log(`Version bumped to ${newVersion}`);
